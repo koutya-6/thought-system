@@ -9,9 +9,12 @@ st.set_page_config(page_title="思考整理・構造化ツール", page_icon="�
 st.title("💡 思考整理・構造化ツール")
 st.write("散らかったメモやアイデアを入力すると、分かりやすく4つの項目に整理してくれます。")
 
-# ※もしここで st.secrets などからAPIキーを読み込んでいる場合は、元の記述に書き換えてください
-# 例: api_key = st.secrets["GEMINI_API_KEY"] など
-api_key = st.text_input("Google AI Studio APIキーを入力してください", type="password")
+# secrets.toml からAPIキーを自動で読み込む
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    st.error("APIキーが設定されていません。.streamlit/secrets.toml に GEMINI_API_KEY を設定してください。")
+    api_key = None
 
 # 整理したいメモの入力
 user_memo = st.text_area("ここにアイデアやメモを自由に書き込んでください", placeholder="例：大学の勉強法教えて")
@@ -19,7 +22,7 @@ user_memo = st.text_area("ここにアイデアやメモを自由に書き込ん
 # 構造化ボタン
 if st.button("✨ メモを構造化・整理する", type="primary"):
     if not api_key:
-        st.warning("APIキーを入力してください。")
+        st.warning("APIキーが設定されていません。")
     elif not user_memo:
         st.warning("メモを入力してください。")
     else:
