@@ -9,7 +9,8 @@ st.set_page_config(page_title="思考整理・構造化ツール", page_icon="�
 st.title("💡 思考整理・構造化ツール")
 st.write("散らかったメモやアイデアを入力すると、分かりやすく4つの項目に整理してくれます。")
 
-# APIキーの入力欄
+# ※もしここで st.secrets などからAPIキーを読み込んでいる場合は、元の記述に書き換えてください
+# 例: api_key = st.secrets["GEMINI_API_KEY"] など
 api_key = st.text_input("Google AI Studio APIキーを入力してください", type="password")
 
 # 整理したいメモの入力
@@ -38,6 +39,8 @@ if st.button("✨ メモを構造化・整理する", type="primary"):
         # Gemini API の呼び出し処理（自動リトライ付き）
         with st.spinner("AIが思考を整理中です..."):
             max_retries = 3  # 最大3回まで自動でやり直す
+            response = None  # レスポンス変数の初期化
+            
             for attempt in range(max_retries):
                 try:
                     client = genai.Client(api_key=api_key)
@@ -60,6 +63,6 @@ if st.button("✨ メモを構造化・整理する", type="primary"):
                         time.sleep(2)
             
             # 正常にレスポンスが取得できている場合のみ表示
-            if 'response' in locals() and response:
+            if response:
                 st.subheader("📋 整理されたメモ")
                 st.markdown(response.text)
