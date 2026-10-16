@@ -1,85 +1,65 @@
 import streamlit as st
+import time
 from google import genai
 from google.genai import types
 
-# ---------------------------------------------------------
-# 1. ページの設定（スマホ対応・タイトル）
-# ---------------------------------------------------------
-st.set_page_config(
-    page_title="AI思考整理システム",
-    page_icon="📝",
-    layout="centered"
-)
+# ページの設定
+st.set_page_config(page_title="思考整理・構造化ツール", page_icon="💡", layout="centered")
 
-st.title("📝 AI思考整理システム")
-st.caption("散らかったメモを入力するだけで、AIがサクッと構造化します。")
+st.title("💡 思考整理・構造化ツール")
+st.write("散らかったメモやアイデアを入力すると、分かりやすく4つの項目に整理してくれます。")
 
-# ---------------------------------------------------------
-# 2. サイドバーの設定（APIキーの自動読み込み ＆ フォールバック）
-# ---------------------------------------------------------
-with st.sidebar:
-    st.header("⚙️ 設定")
-    
-    # StreamlitのSecretsからAPIキーを自動取得を試みる
-    try:
-        api_key = st.secrets["GEMINI_API_KEY"]
-        st.success("🔒 APIキーは安全に自動適用されています")
-    except:
-        # Secretsが設定されていない場合やローカルテスト用の手入力欄
-        api_key = st.text_input("Google AI Studio API Key", type="password", help="Gemini APIキーを入力してください")
-    
-    st.divider()
-    st.markdown("💡 **使い方**\n1. 下の欄にメモを入力\n2. ボタンを押して実行！")
+# APIキーの入力欄
+api_key = st.text_input("Google AI Studio APIキーを入力してください", type="password")
 
-# ---------------------------------------------------------
-# 3. メイン画面：整理したい散らかったメモの入力欄
-# ---------------------------------------------------------
-st.subheader("3. 整理したい散らかったメモを入力")
+# 整理したいメモの入力
+user_memo = st.text_area("ここにアイデアやメモを自由に書き込んでください", placeholder="例：大学の勉強法教えて")
 
-user_memo = st.text_area(
-    "ここにアイデアやメモを自由に書き込んでください",
-    height=200,
-    placeholder="例：新しいアプリのアイデア。大学の講義ノートを写真で撮ったら自動で単語帳を作ってくれる仕組み。初心者でも作れるかな？"
-)
-
-# 実行ボタン
-if st.button("✨ メモを構造化・整理する", type="primary", use_container_width=True):
-    # 入力チェック
+# 構造化ボタン
+if st.button("✨ メモを構造化・整理する", type="primary"):
     if not api_key:
-        st.error("⚠️ APIキーが設定されていません。StreamlitのSecrets設定を確認するか、サイドバーに入力してください。")
-    elif not user_memo.strip():
-        st.warning("⚠️ 整理したいメモテキストを入力してください。")
+        st.warning("APIキーを入力してください。")
+    elif not user_memo:
+        st.warning("メモを入力してください。")
     else:
-        # 基本モード（シングルモード）のシステム指示
+        # システムプロンプトの定義
         system_instruction = """
-        あなたは優秀な思考整理・要約アシスタントです。
-        ユーザーから入力された雑多なメモやアイデアを整理し、以下の構成で分かりやすく出力してください。
+        あなたは優秀な思考整理アシスタントです。
+        ユーザーから入力された散らかったメモやアイデアを受け取り、以下の4つの項目にきれいに整理・構造化して出力してください。
 
-        1. 【概要】：このアイデアの一言まとめ
-        2. 【主要な要素・ポイント】：内容を箇条書きで整理
-        3. 【課題や懸念点】：見落としているかもしれないポイント
-        4. 【ネクストアクション】：今すぐ取り組むべき具体的な一歩
+        1. **概要**: メモ全体の要約（1〜2行）
+        2. **主要な要素**: 抽出された重要なポイントやキーワード（箇条書き）
+        3. **課題**: そこから見えてくる問題点や懸念点
+        4. **ネクストアクション**: 次に具体的に取るべき行動
 
-        出力はMarkdown形式で、見やすく綺麗に整えてください。
+        出力はMarkdown形式で、見やすさを重視してください。
         """
 
-        # Gemini API の呼び出し処理
+        # Gemini API の呼び出し処理（自動リトライ付き）
         with st.spinner("AIが思考を整理中です..."):
-            try:
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=user_memo,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3 ,
+            max_retries = 3  # 最大3回まで自動でやり直す
+            for attempt in range(max_retries):
+                try:
+                    client = genai.Client(api_key=api_key)
+                    response = client.models.generate_content(
+                        model='gemini-3.8-flash',
+                        contents=user_memo,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.3
+                        )
                     )
-                )
-                
-                # 画面への出力
-                st.success("整理が完了しました！")
-                st.markdown("---")
+                    # 成功したらループを抜ける
+                    break
+                except Exception as e:
+                    # 最後の挑戦でもダメだった場合はエラーを表示
+                    if attempt == max_retries - 1:
+                        st.error(f"エラーが発生しました: {e}")
+                    else:
+                        # 一時的なエラーの場合は2秒待ってから自動で再試行
+                        time.sleep(2)
+            
+            # 正常にレスポンスが取得できている場合のみ表示
+            if 'response' in locals() and response:
+                st.subheader("📋 整理されたメモ")
                 st.markdown(response.text)
-                
-            except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
