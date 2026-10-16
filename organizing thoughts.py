@@ -68,7 +68,7 @@ if st.button("✨ メモを構造化・整理する", type="primary", use_contai
             try:
                 client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(
-                    model='gemini-3.8-flash',
+                    model='gemini-1.5-flash',
                     contents=user_memo,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
