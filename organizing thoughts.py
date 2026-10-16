@@ -15,14 +15,21 @@ st.title("📝 AI思考整理システム")
 st.caption("散らかったメモを入力するだけで、AIがサクッと構造化します。")
 
 # ---------------------------------------------------------
-# 2. サイドバーの設定（APIキー入力のみ）
+# 2. サイドバーの設定（APIキーの自動読み込み ＆ フォールバック）
 # ---------------------------------------------------------
 with st.sidebar:
     st.header("⚙️ 設定")
-    # APIキーの入力欄（パスワード隠し表示）
-    api_key = st.text_input("Google AI Studio API Key", type="password", help="Gemini APIキーを入力してください")
+    
+    # StreamlitのSecretsからAPIキーを自動取得を試みる
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        st.success("🔒 APIキーは安全に自動適用されています")
+    except:
+        # Secretsが設定されていない場合やローカルテスト用の手入力欄
+        api_key = st.text_input("Google AI Studio API Key", type="password", help="Gemini APIキーを入力してください")
+    
     st.divider()
-    st.markdown("💡 **使い方**\n1. APIキーを入力\n2. 下の欄にメモを入力\n3. ボタンを押して実行！")
+    st.markdown("💡 **使い方**\n1. 下の欄にメモを入力\n2. ボタンを押して実行！")
 
 # ---------------------------------------------------------
 # 3. メイン画面：整理したい散らかったメモの入力欄
@@ -39,7 +46,7 @@ user_memo = st.text_area(
 if st.button("✨ メモを構造化・整理する", type="primary", use_container_width=True):
     # 入力チェック
     if not api_key:
-        st.error("⚠️ 左側のサイドバーに Google AI Studio の APIキー を入力してください。")
+        st.error("⚠️ APIキーが設定されていません。StreamlitのSecrets設定を確認するか、サイドバーに入力してください。")
     elif not user_memo.strip():
         st.warning("⚠️ 整理したいメモテキストを入力してください。")
     else:
